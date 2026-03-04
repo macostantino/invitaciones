@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Invitaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- ===================== PRINT STYLES ===================== -->
+<style id="printStyles">
+@media print {
+  body * { visibility: hidden !important; }
+  #printArea, #printArea * { visibility: visible !important; }
+  #printArea {
+    position: fixed !important;
+    inset: 0 !important;
+    background: #fff !important;
+    padding: 24px 28px !important;
+    z-index: 9999 !important;
+  }
+  .no-print { display: none !important; }
+}
+</style>
+
+<!-- ===================== MAIN STYLES ===================== -->
+<style>
+  :root {
+    --ink: #0f0e0c;
+    --cream: #f5f0e8;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a0;
+    --green: #2d6a4f;
+    --red: #a33b2a;
+    --muted: #7a7060;
+    --border: #d9d0be;
+    --card: #faf7f2;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+
+  /* HEADER */
+  header { background:var(--ink); padding:34px 32px 26px; text-align:center; position:relative; overflow:hidden; }
+  header::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(201,168,76,.04) 40px,rgba(201,168,76,.04) 41px); }
+  .hdr-label { font-size:11px; font-weight:500; letter-spacing:4px; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
+  header h1 { font-family:'Playfair Display',serif; font-size:clamp(24px,5vw,42px); font-weight:900; color:#fff; line-height:1.1; margin-bottom:5px; }
+  header p  { color:#9a9080; font-size:14px; font-weight:300; }
+
+  /* CONFIG */
+  .config-bar { padding:11px 24px; background:#1a1916; display:flex; gap:14px; align-items:center; flex-wrap:wrap; border-bottom:2px solid var(--gold); }
+  .config-bar label { color:var(--gold-light); font-size:10px; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+  .config-bar input { background:rgba(255,255,255,.07); border:1px solid rgba(201,168,76,.3); color:#fff; padding:7px 12px; font-family:'DM Sans',sans-serif; font-size:13px; border-radius:3px; outline:none; width:210px; }
+  .config-bar input::placeholder { color:#5a5040; }
+  .config-bar input:focus { border-color:var(--gold); }
+
+  /* STATS */
+  .stats-bar { display:flex; gap:1px; background:var(--border); border-bottom:1px solid var(--border); }
+  .stat { flex:1; background:var(--card); padding:15px 10px; text-align:center; }
+  .stat-num { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; line-height:1; margin-bottom:3px; }
+  .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:500; }
+  .sn-total   { color:var(--ink); }
+  .sn-sent    { color:#1a3a7a; }
+  .sn-yes     { color:var(--green); }
+  .sn-no      { color:var(--red); }
+  .sn-pending { color:var(--gold); }
+
+  /* TOOLBAR */
+  .toolbar { padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+  .toolbar input, .toolbar select { padding:8px 13px; border:1px solid var(--border); background:var(--cream); font-family:'DM Sans',sans-serif; font-size:13px; color:var(--ink); border-radius:4px; outline:none; }
+  .toolbar input { flex:1; min-width:170px; }
+  .toolbar input:focus, .toolbar select:focus { border-color:var(--gold); }
+  .btn { padding:8px 16px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; border:none; border-radius:4px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .btn-gold   { background:var(--gold); color:#fff; }
+  .btn-gold:hover   { background:#b8953e; }
+  .btn-green  { background:var(--green); color:#fff; }
+  .btn-green:hover  { background:#1f4d38; }
+  .btn-blue   { background:#1a3a7a; color:#fff; }
+  .btn-blue:hover   { background:#122a5a; }
+  .btn-out    { background:transparent; color:var(--ink); border:1px solid var(--border); }
+  .btn-out:hover    { background:var(--cream); border-color:var(--ink); }
+  .btn-danger { background:transparent; color:var(--red); border:1px solid #e8b0a8; }
+  .btn-danger:hover { background:#ffeaea; border-color:var(--red); }
+
+  /* PDF DROPDOWN */
+  .pdf-wrap { position:relative; }
+  .pdf-menu { position:absolute; top:calc(100% + 4px); right:0; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:190px; z-index:50; display:none; animation:fadeIn .15s ease; }
+  .pdf-menu.open { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  .pdf-item { padding:9px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); transition:background .1s; }
+  .pdf-item:last-child { border-bottom:none; }
+  .pdf-item:hover { background:var(--cream); }
+  .pdf-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* ADD FORM */
+  .add-sec { padding:14px 24px; background:#fff8f0; border-bottom:2px solid var(--gold); display:none; animation:slideDown .2s ease; }
+  .add-sec.open { display:block; }
+  @keyframes slideDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .add-row { display:flex; gap:9px; flex-wrap:wrap; align-items:flex-end; }
+  .add-field { display:flex; flex-direction:column; gap:3px; flex:1; min-width:140px; }
+  .add-field label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-weight:500; }
+  .add-field input { padding:8px 11px; border:1px solid var(--border); background:var(--cream); font-family:'DM Sans',sans-serif; font-size:13px; border-radius:4px; outline:none; }
+  .add-field input:focus { border-color:var(--gold); }
+
+  /* TABLE */
+  .tbl-wrap { overflow-x:auto; padding-bottom:40px; }
+  table { width:100%; border-collapse:collapse; min-width:940px; }
+  thead tr { background:var(--ink); }
+  thead th { padding:12px 13px; text-align:left; font-size:10px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--gold-light); white-space:nowrap; }
+  tbody tr { border-bottom:1px solid var(--border); background:var(--card); transition:background .1s; }
+  tbody tr:hover { background:#fff; }
+  tbody td { padding:11px 13px; font-size:13px; vertical-align:middle; }
+  .tc-num   { color:var(--muted); font-size:11px; width:34px; }
+  .tc-name  { font-weight:500; }
+  .tc-phone { color:var(--muted); white-space:nowrap; }
+  .tc-notes { color:var(--muted); font-style:italic; max-width:110px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tc-ts    { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* BADGES */
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; }
+  .badge.pending { background:#f5edd5; color:#7a5c00; }
+  .badge.sent    { background:#dce8ff; color:#1a3a7a; }
+  .badge.yes     { background:#d4edda; color:#1a5c34; }
+  .badge.no      { background:#f8d7da; color:#7a1f1f; }
+  .badge.dash    { background:transparent; color:#ccc; font-size:16px; letter-spacing:0; padding:0 3px; }
+
+  /* ROW ACTIONS */
+  .ra-wrap { display:flex; gap:4px; flex-wrap:nowrap; }
+  .ra { padding:4px 9px; font-size:11px; font-weight:600; border:none; border-radius:3px; cursor:pointer; transition:all .1s; white-space:nowrap; }
+  .ra-wa    { background:#25D366; color:#fff; }
+  .ra-wa:hover   { background:#128C7E; }
+  .ra-yes   { background:#d4edda; color:#1a5c34; border:1px solid #a8d5b5; }
+  .ra-yes:hover  { background:#2d6a4f; color:#fff; }
+  .ra-no    { background:#f8d7da; color:#7a1f1f; border:1px solid #e8a8a0; }
+  .ra-no:hover   { background:#a33b2a; color:#fff; }
+  .ra-del   { background:#fff0f0; color:#a33b2a; border:1px solid #e8b0a8; }
+  .ra-del:hover  { background:#a33b2a; color:#fff; }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:55px 20px; color:var(--muted); }
+  .empty-icon { font-size:34px; margin-bottom:8px; }
+  .empty p { font-size:14px; }
+
+  /* MODALS */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(15,14,12,.76); z-index:200; align-items:center; justify-content:center; padding:20px; }
+  .overlay.open { display:flex; }
+  .mbox { background:var(--cream); border-radius:6px; padding:26px; width:100%; animation:popIn .17s ease; }
+  @keyframes popIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
+  .mbox h2 { font-family:'Playfair Display',serif; font-size:19px; margin-bottom:5px; }
+  .mbox .msub { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .mbox textarea { width:100%; padding:11px 13px; border:1px solid var(--border); background:#fff; font-family:'DM Sans',sans-serif; font-size:13px; border-radius:4px; resize:vertical; min-height:120px; outline:none; margin-bottom:14px; line-height:1.6; }
+  .mbox textarea:focus { border-color:var(--gold); }
+  .mact { display:flex; gap:9px; justify-content:flex-end; flex-wrap:wrap; }
+  /* confirm modal */
+  .cbox { max-width:370px; text-align:center; }
+  .cbox .cicon { font-size:34px; margin-bottom:8px; }
+  .cbox h3 { font-family:'Playfair Display',serif; font-size:17px; margin-bottom:7px; }
+  .cbox p { color:var(--muted); font-size:13px; margin-bottom:18px; }
+  .cact { display:flex; gap:9px; justify-content:center; }
+  /* wa modal */
+  .wabox { max-width:500px; }
+  /* bulk modal */
+  .bkbox { max-width:540px; }
+  .bk-list { max-height:200px; overflow-y:auto; margin-bottom:12px; border:1px solid var(--border); border-radius:4px; background:#fff; }
+  .bk-item { display:flex; align-items:center; gap:9px; padding:8px 13px; border-bottom:1px solid var(--border); font-size:13px; }
+  .bk-item:last-child { border-bottom:none; }
+  .bk-item input[type=checkbox] { accent-color:var(--gold); width:14px; height:14px; cursor:pointer; flex-shrink:0; }
+  .bk-item .bi-name  { font-weight:500; flex:1; cursor:pointer; }
+  .bk-item .bi-phone { color:var(--muted); font-size:12px; }
+  .bk-note { font-size:11px; color:var(--muted); margin-bottom:12px; padding:8px 11px; background:#fff8f0; border-radius:4px; border-left:3px solid var(--gold); line-height:1.5; }
+  .bk-foot { display:flex; gap:9px; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  .sel-all { font-size:12px; color:var(--gold); cursor:pointer; text-decoration:underline; font-weight:500; }
+
+  /* ===================== PRINT AREA ===================== */
+  #printArea {
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    color: #111;
+    font-size: 12px;
+  }
+  .pa-header { margin-bottom: 18px; border-bottom: 2px solid #111; padding-bottom: 10px; }
+  .pa-header h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; margin-bottom: 3px; }
+  .pa-header p  { font-size: 11px; color: #555; }
+  .pa-section   { margin-bottom: 18px; }
+  .pa-section h3 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; padding: 4px 8px; color: #fff; border-radius: 2px; }
+  .pa-section h3.h-yes  { background: #2d6a4f; }
+  .pa-section h3.h-no   { background: #a33b2a; }
+  .pa-section h3.h-sent { background: #1a3a7a; }
+  .pa-section h3.h-pend { background: #7a5c00; }
+  .pa-table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+  .pa-table th { background:#f0ece4; padding:5px 8px; text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; border:1px solid #d0c8b8; }
+  .pa-table td { padding:5px 8px; border:1px solid #d0c8b8; font-size:11px; vertical-align:top; }
+  .pa-table tr:nth-child(even) td { background:#f8f5f0; }
+  .pa-footer { margin-top:14px; font-size:10px; color:#888; border-top:1px solid #ddd; padding-top:6px; display:flex; justify-content:space-between; }
+
+  footer { text-align:center; padding:18px; font-size:11px; color:var(--muted); letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<!-- =================== PRINT AREA =================== -->
+<div id="printArea"></div>
+
+<!-- =================== UI =================== -->
+<header>
+  <div class="hdr-label">Sistema de Invitaciones</div>
+  <h1 id="eventTitle">Nombre del Evento</h1>
+  <p id="eventDate">Fecha y lugar del evento</p>
+</header>
+
+<div class="config-bar">
+  <label>Evento:</label>
+  <input type="text" id="cfgTitle" placeholder="Ej: Cena Anual 2025" oninput="updateEvent()">
+  <label>Fecha / Lugar:</label>
+  <input type="text" id="cfgDate"  placeholder="Ej: Viernes 20 Jun · Salón Norte" oninput="updateEvent()">
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num sn-total"   id="cTotal">0</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-num sn-sent"    id="cSent">0</div><div class="stat-label">Enviados</div></div>
+  <div class="stat"><div class="stat-num sn-yes"     id="cYes">0</div><div class="stat-label">Confirman</div></div>
+  <div class="stat"><div class="stat-num sn-no"      id="cNo">0</div><div class="stat-label">No asisten</div></div>
+  <div class="stat"><div class="stat-num sn-pending" id="cPending">0</div><div class="stat-label">Sin enviar</div></div>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍  Buscar por nombre o teléfono…" oninput="renderTable()">
+  <select id="filterStatus" onchange="renderTable()">
+    <option value="">Todos los estados</option>
+    <option value="pending">Sin enviar</option>
+    <option value="sent">Invitación enviada</option>
+    <option value="yes">Confirma asistencia</option>
+    <option value="no">No asiste</option>
+  </select>
+  <button class="btn btn-gold"  onclick="toggleAdd()">＋ Agregar</button>
+  <button class="btn btn-green" onclick="openBulk()">📲 Enviar invitaciones</button>
+
+  <!-- PDF DROPDOWN -->
+  <div class="pdf-wrap" id="pdfWrap">
+    <button class="btn btn-blue" onclick="togglePdfMenu(event)">📄 Exportar PDF ▾</button>
+    <div class="pdf-menu" id="pdfMenu">
+      <div class="pdf-item" onclick="printReport('all')">
+        <span class="pdf-dot" style="background:#555"></span>Todos los invitados
+      </div>
+      <div class="pdf-item" onclick="printReport('yes')">
+        <span class="pdf-dot" style="background:#2d6a4f"></span>Confirman asistencia
+      </div>
+      <div class="pdf-item" onclick="printReport('no')">
+        <span class="pdf-dot" style="background:#a33b2a"></span>No asisten
+      </div>
+      <div class="pdf-item" onclick="printReport('sent')">
+        <span class="pdf-dot" style="background:#1a3a7a"></span>Invitación enviada (sin resp.)
+      </div>
+      <div class="pdf-item" onclick="printReport('pending')">
+        <span class="pdf-dot" style="background:#7a5c00"></span>Sin enviar
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar todos</button>
+</div>
+
+<div class="add-sec" id="addSec">
+  <div class="add-row">
+    <div class="add-field"><label>Nombre *</label><input type="text" id="newName"  placeholder="Ej: Juan Pérez"></div>
+    <div class="add-field"><label>Teléfono (código país) *</label><input type="text" id="newPhone" placeholder="Ej: 5492994123456"></div>
+    <div class="add-field"><label>Notas</label><input type="text" id="newNotes" placeholder="Opcional…"></div>
+    <div style="display:flex;align-items:flex-end">
+      <button class="btn btn-gold" onclick="addPerson()">Agregar ➜</button>
+    </div>
+  </div>
+</div>
+
+<div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Nombre</th><th>Teléfono</th><th>Notas</th>
+        <th>📤 Mensaje enviado</th>
+        <th>📥 Respuesta recibida</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="empty-icon">📋</div>
+    <p>No hay invitados. Usá <strong>＋ Agregar</strong> para comenzar.</p>
+  </div>
+</div>
+
+<!-- MODAL: WhatsApp individual -->
+<div class="overlay" id="ovWA">
+  <div class="mbox wabox">
+    <h2>Enviar por WhatsApp</h2>
+    <p class="msub" id="waDesc"></p>
+    <textarea id="waMsg"></textarea>
+    <div class="mact">
+      <button class="btn btn-out"   onclick="closeAll()">Cancelar</button>
+      <button class="btn btn-green" onclick="sendWA()">📲 Abrir WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar borrado -->
+<div class="overlay" id="ovDel">
+  <div class="mbox cbox">
+    <div class="cicon">🗑️</div>
+    <h3>¿Eliminar invitado?</h3>
+    <p id="delDesc">Esta acción no se puede deshacer.</p>
+    <div class="cact">
+      <button class="btn btn-out"    onclick="closeAll()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmDel()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Envío masivo -->
+<div class="overlay" id="ovBulk">
+  <div class="mbox bkbox">
+    <h2>📲 Enviar invitaciones</h2>
+    <p class="msub">Seleccioná a quiénes querés enviar la invitación con botones de confirmación.</p>
+    <div class="bk-list" id="bulkList"></div>
+    <div class="bk-note">
+      ⚠️ Cada invitado recibirá un link con botones para confirmar <strong>Sí / No</strong>. Se abre una ventana de WhatsApp por persona (intervalo 1 seg). Permitir pop-ups en el navegador.
+    </div>
+    <div class="bk-foot">
+      <span class="sel-all" onclick="toggleSelAll()">✔ Seleccionar / Deseleccionar todos</span>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-out"   onclick="closeAll()">Cancelar</button>
+        <button class="btn btn-green" onclick="sendBulk()">📲 Enviar seleccionados</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Gestión de Invitaciones · Los datos se guardan automáticamente en este navegador</footer>
+
+<!-- ===================== SCRIPT ===================== -->
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let people    = JSON.parse(localStorage.getItem('inv_v4') || '[]');
+let eventCfg  = JSON.parse(localStorage.getItem('evtCfg') || '{"title":"Nombre del Evento","date":"Fecha y lugar del evento"}');
+let delTarget = null;
+let waTarget  = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.getElementById('cfgTitle').value = eventCfg.title;
+document.getElementById('cfgDate').value  = eventCfg.date;
+syncHeader();
+checkConfirmParam(); // handle ?confirm= link clicks
+renderTable();
+
+// ── PERSISTENCE ───────────────────────────────────────────────────────────
+function save() { localStorage.setItem('inv_v4', JSON.stringify(people)); }
+
+function syncHeader() {
+  document.getElementById('eventTitle').textContent = eventCfg.title || 'Nombre del Evento';
+  document.getElementById('eventDate').textContent  = eventCfg.date  || 'Fecha y lugar del evento';
+}
+function updateEvent() {
+  eventCfg.title = document.getElementById('cfgTitle').value;
+  eventCfg.date  = document.getElementById('cfgDate').value;
+  syncHeader();
+  localStorage.setItem('evtCfg', JSON.stringify(eventCfg));
+}
+
+// ── CONFIRMATION LINK HANDLER ─────────────────────────────────────────────
+// When someone clicks the link in WhatsApp it opens THIS same file
+// with ?confirm=ID&r=yes|no  →  we register the response automatically.
+function checkConfirmParam() {
+  const params = new URLSearchParams(window.location.search);
+  const id  = parseInt(params.get('confirm'));
+  const res = params.get('r'); // 'yes' or 'no'
+  if (!id || !res) return;
+
+  const p = people.find(x => x.id === id);
+  if (p && (res === 'yes' || res === 'no')) {
+    p.status     = res;
+    p.responseAt = now();
+    save();
+    // Show a nice full-screen confirmation page instead of the admin panel
+    showConfirmationPage(p, res);
+  } else {
+    // ID not found or already replied — show a generic page
+    showConfirmationPage(null, res);
+  }
+}
+
+function showConfirmationPage(p, res) {
+  const isYes = res === 'yes';
+  const name  = p ? p.name : 'Invitado/a';
+  const evt   = eventCfg.title || 'el evento';
+  const fecha = eventCfg.date  || '';
+
+  document.body.innerHTML = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
+           background:${isYes ? 'linear-gradient(135deg,#1a3d2b 0%,#2d6a4f 100%)' : 'linear-gradient(135deg,#3d1a1a 0%,#a33b2a 100%)'};
+           color:#fff;padding:30px;text-align:center;}
+      .card{max-width:440px;width:100%;}
+      .bigicon{font-size:72px;margin-bottom:18px;animation:pop .4s ease;}
+      @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+      h1{font-family:'Playfair Display',serif;font-size:clamp(26px,6vw,40px);font-weight:900;margin-bottom:10px;line-height:1.1;}
+      .sub{font-size:16px;opacity:.85;margin-bottom:24px;line-height:1.5;}
+      .pill{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+            padding:8px 20px;border-radius:30px;font-size:14px;backdrop-filter:blur(4px);margin-bottom:28px;}
+      .note{font-size:12px;opacity:.6;line-height:1.6;}
+    </style>
+    <div class="card">
+      <div class="bigicon">${isYes ? '🎉' : '😔'}</div>
+      <h1>${isYes ? '¡Nos vemos ahí!' : 'Gracias por avisar'}</h1>
+      <p class="sub">
+        ${isYes
+          ? `<strong>${name}</strong>, tu asistencia a <em>${evt}</em> quedó confirmada.`
+          : `<strong>${name}</strong>, registramos que no vas a poder asistir a <em>${evt}</em>.`
+        }
+      </p>
+      ${fecha ? `<div class="pill">📅 ${fecha}</div>` : ''}
+      <p class="note">Podés cerrar esta ventana.</p>
+    </div>
+  `;
+}
+
+// ── WHATSAPP MESSAGE ───────────────────────────────────────────────────────
+// The message includes a confirmation link that, when opened, registers the answer.
+function buildMsg(p) {
+  const t = eventCfg.title || 'nuestro evento';
+  const d = eventCfg.date  || '';
+
+  // Base URL of this same file (works both locally and hosted)
+  const base = window.location.href.split('?')[0];
+  const linkYes = `${base}?confirm=${p.id}&r=yes`;
+  const linkNo  = `${base}?confirm=${p.id}&r=no`;
+
+  return `Hola ${p.name} 👋\n\nTe invitamos a *${t}*${d ? '\n📅 ' + d : ''}.\n\n¿Podés confirmar tu asistencia?\n\n✅ *SÍ, confirmo:*\n${linkYes}\n\n❌ *NO puedo ir:*\n${linkNo}\n\n¡Gracias!`;
+}
+
+// ── ADD / DELETE ───────────────────────────────────────────────────────────
+function toggleAdd() {
+  const s = document.getElementById('addSec');
+  s.classList.toggle('open');
+  if (s.classList.contains('open')) document.getElementById('newName').focus();
+}
+
+function addPerson() {
+  const name  = document.getElementById('newName').value.trim();
+  const phone = document.getElementById('newPhone').value.trim().replace(/\D/g,'');
+  const notes = document.getElementById('newNotes').value.trim();
+  if (!name)  { alert('El nombre es obligatorio.'); return; }
+  if (!phone) { alert('El teléfono es obligatorio.'); return; }
+  people.push({ id: Date.now(), name, phone, notes, status:'pending', sentAt:null, responseAt:null });
+  save();
+  document.getElementById('newName').value  = '';
+  document.getElementById('newPhone').value = '';
+  document.getElementById('newNotes').value = '';
+  document.getElementById('newName').focus();
+  renderTable();
+}
+
+function askDel(id) {
+  const p = people.find(x => x.id === id);
+  delTarget = id;
+  document.getElementById('delDesc').textContent = `¿Eliminar a "${p.name}"? Esta acción no se puede deshacer.`;
+  document.getElementById('ovDel').classList.add('open');
+}
+function confirmDel() {
+  people = people.filter(p => p.id !== delTarget);
+  delTarget = null;
+  save(); closeAll(); renderTable();
+}
+function clearAll() {
+  if (!people.length) return;
+  if (!confirm(`¿Borrar los ${people.length} invitados? Esta acción no se puede deshacer.`)) return;
+  people = []; save(); renderTable();
+}
+
+// ── STATUS ─────────────────────────────────────────────────────────────────
+function setStatus(id, status) {
+  const p = people.find(x => x.id === id);
+  if (!p) return;
+  p.status = status;
+  if (status === 'yes' || status === 'no') p.responseAt = now();
+  save(); renderTable();
+}
+
+// ── SINGLE WA ─────────────────────────────────────────────────────────────
+function openWA(id) {
+  waTarget = id;
+  const p = people.find(x => x.id === id);
+  document.getElementById('waDesc').textContent = `Para: ${p.name}  ·  +${p.phone}`;
+  document.getElementById('waMsg').value = buildMsg(p);
+  document.getElementById('ovWA').classList.add('open');
+}
+function sendWA() {
+  const p = people.find(x => x.id === waTarget);
+  if (!p) return;
+  const msg = encodeURIComponent(document.getElementById('waMsg').value);
+  window.open(`https://wa.me/${p.phone}?text=${msg}`, '_blank');
+  p.status = 'sent'; p.sentAt = now();
+  save(); closeAll(); renderTable();
+}
+
+// ── BULK SEND ─────────────────────────────────────────────────────────────
+function openBulk() {
+  const list = document.getElementById('bulkList');
+  list.innerHTML = '';
+  const eligible = people.filter(p => p.status === 'pending' || p.status === 'sent');
+  if (!eligible.length) { alert('No hay invitados pendientes de respuesta para enviar.'); return; }
+  eligible.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'bk-item';
+    d.innerHTML = `
+      <input type="checkbox" id="ck_${p.id}" value="${p.id}" ${p.status==='pending'?'checked':''}>
+      <label for="ck_${p.id}" class="bi-name">${esc(p.name)}</label>
+      <span class="bi-phone">+${esc(p.phone)}</span>
+      <span class="badge ${p.status}">${p.status==='pending'?'⏳ Sin enviar':'📤 Re-enviar'}</span>
+    `;
+    list.appendChild(d);
+  });
+  document.getElementById('ovBulk').classList.add('open');
+}
+function toggleSelAll() {
+  const cbs = document.querySelectorAll('#bulkList input[type=checkbox]');
+  const all = [...cbs].every(c => c.checked);
+  cbs.forEach(c => c.checked = !all);
+}
+function sendBulk() {
+  const ids = [...document.querySelectorAll('#bulkList input[type=checkbox]:checked')].map(c => parseInt(c.value));
+  if (!ids.length) { alert('Seleccioná al menos una persona.'); return; }
+  closeAll();
+  ids.forEach((id, i) => {
+    setTimeout(() => {
+      const p = people.find(x => x.id === id);
+      if (!p) return;
+      window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(buildMsg(p))}`, '_blank');
+      p.status = 'sent'; p.sentAt = now();
+      save(); renderTable();
+    }, i * 1000);
+  });
+}
+
+// ── PDF / PRINT ────────────────────────────────────────────────────────────
+function togglePdfMenu(e) {
+  e.stopPropagation();
+  document.getElementById('pdfMenu').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('pdfMenu').classList.remove('open'));
+
+function printReport(filter) {
+  document.getElementById('pdfMenu').classList.remove('open');
+
+  const titles = { all:'Todos los invitados', yes:'Confirman asistencia', no:'No asisten', sent:'Invitación enviada (sin respuesta)', pending:'Sin enviar' };
+  const hCls   = { yes:'h-yes', no:'h-no', sent:'h-sent', pending:'h-pend', all:'h-sent' };
+  const statLbl= { pending:'Sin enviar', sent:'Enviado', yes:'Sí asiste', no:'No asiste' };
+
+  let groups;
+  if (filter === 'all') {
+    groups = [
+      { label:'Confirman asistencia ✅',   cls:'h-yes',  data: people.filter(p=>p.status==='yes')  },
+      { label:'No asisten ❌',             cls:'h-no',   data: people.filter(p=>p.status==='no')   },
+      { label:'Invitación enviada ⏳',     cls:'h-sent', data: people.filter(p=>p.status==='sent') },
+      { label:'Sin enviar 📋',            cls:'h-pend', data: people.filter(p=>p.status==='pending') },
+    ].filter(g => g.data.length);
+  } else {
+    const clsMap = { yes:'h-yes', no:'h-no', sent:'h-sent', pending:'h-pend' };
+    groups = [{ label: titles[filter], cls: clsMap[filter] || 'h-sent', data: people.filter(p=>p.status===filter) }];
+  }
+
+  if (!groups.length || groups.every(g=>!g.data.length)) {
+    alert('No hay invitados en este estado para exportar.'); return;
+  }
+
+  const totalCount = groups.reduce((s,g)=>s+g.data.length, 0);
+
+  let html = `
+    <div class="pa-header">
+      <h2>${esc(eventCfg.title || 'Evento')}</h2>
+      <p>${esc(eventCfg.date || '')} &nbsp;·&nbsp; Exportado: ${now()} &nbsp;·&nbsp; Total: ${totalCount}</p>
+    </div>
+  `;
+
+  groups.forEach(g => {
+    html += `<div class="pa-section">
+      <h3 class="${g.cls}">${g.label} — ${g.data.length} persona(s)</h3>
+      <table class="pa-table">
+        <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Estado</th><th>Envío</th><th>Respuesta</th><th>Notas</th></tr></thead>
+        <tbody>`;
+    g.data.forEach((p,i) => {
+      html += `<tr>
+        <td>${i+1}</td>
+        <td>${esc(p.name)}</td>
+        <td>+${esc(p.phone)}</td>
+        <td>${statLbl[p.status]||''}</td>
+        <td>${p.sentAt||'—'}</td>
+        <td>${p.responseAt||'—'}</td>
+        <td>${esc(p.notes)||'—'}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+
+  html += `<div class="pa-footer"><span>${esc(eventCfg.title||'')}</span><span>Generado el ${now()}</span></div>`;
+
+  const pa = document.getElementById('printArea');
+  pa.innerHTML = html;
+  pa.style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { pa.style.display = 'none'; pa.innerHTML = ''; }, 500);
+  }, 120);
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function now() {
+  return new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function closeAll() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+}
+
+// ── RENDER TABLE ───────────────────────────────────────────────────────────
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filt   = document.getElementById('filterStatus').value;
+  const list   = people.filter(p => {
+    const ms = !search || p.name.toLowerCase().includes(search) || p.phone.includes(search);
+    const mf = !filt   || p.status === filt;
+    return ms && mf;
+  });
+
+  document.getElementById('cTotal').textContent   = people.length;
+  document.getElementById('cSent').textContent    = people.filter(p=>p.status!=='pending').length;
+  document.getElementById('cYes').textContent     = people.filter(p=>p.status==='yes').length;
+  document.getElementById('cNo').textContent      = people.filter(p=>p.status==='no').length;
+  document.getElementById('cPending').textContent = people.filter(p=>p.status==='pending').length;
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
+
+  const sentB = {
+    pending:`<span class="badge pending">⏳ No enviado</span>`,
+    sent:   `<span class="badge sent">📤 Enviado</span>`,
+    yes:    `<span class="badge sent">📤 Enviado</span>`,
+    no:     `<span class="badge sent">📤 Enviado</span>`,
+  };
+  const resB = {
+    pending:`<span class="badge dash">—</span>`,
+    sent:   `<span class="badge pending">⏳ Sin respuesta</span>`,
+    yes:    `<span class="badge yes">✅ Sí asiste</span>`,
+    no:     `<span class="badge no">❌ No asiste</span>`,
+  };
+
+  list.forEach(p => {
+    const idx = people.indexOf(p)+1;
+    const tr  = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="tc-num">${idx}</td>
+      <td class="tc-name">${esc(p.name)}</td>
+      <td class="tc-phone">+${esc(p.phone)}</td>
+      <td class="tc-notes" title="${esc(p.notes)}">${esc(p.notes)||'—'}</td>
+      <td>${sentB[p.status]}${p.sentAt?`<div class="tc-ts">${p.sentAt}</div>`:''}</td>
+      <td>${resB[p.status]}${p.responseAt?`<div class="tc-ts">${p.responseAt}</div>`:''}</td>
+      <td>
+        <div class="ra-wrap">
+          <button class="ra ra-wa"  onclick="openWA(${p.id})">📲 WA</button>
+          <button class="ra ra-yes" onclick="setStatus(${p.id},'yes')">✅ Sí</button>
+          <button class="ra ra-no"  onclick="setStatus(${p.id},'no')">❌ No</button>
+          <button class="ra ra-del" onclick="askDel(${p.id})">🗑 Borrar</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── KEYBOARD ───────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') closeAll();
+  if (e.key==='Enter' && document.getElementById('addSec').classList.contains('open')) addPerson();
+});
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target===o) closeAll(); });
+});
+</script>
+</body>
+</html>
