@@ -6,37 +6,42 @@
 <title>Gestión de Invitaciones</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- ===================== PRINT STYLES ===================== -->
-<style id="printStyles">
+<style>
 @media print {
   body * { visibility: hidden !important; }
   #printArea, #printArea * { visibility: visible !important; }
-  #printArea {
-    position: fixed !important;
-    inset: 0 !important;
-    background: #fff !important;
-    padding: 24px 28px !important;
-    z-index: 9999 !important;
-  }
-  .no-print { display: none !important; }
+  #printArea { position:fixed !important; inset:0 !important; background:#fff !important; padding:24px 28px !important; z-index:9999 !important; }
 }
 </style>
 
-<!-- ===================== MAIN STYLES ===================== -->
 <style>
   :root {
-    --ink: #0f0e0c;
-    --cream: #f5f0e8;
-    --gold: #c9a84c;
-    --gold-light: #e8d5a0;
-    --green: #2d6a4f;
-    --red: #a33b2a;
-    --muted: #7a7060;
-    --border: #d9d0be;
-    --card: #faf7f2;
+    --ink: #0f0e0c; --cream: #f5f0e8; --gold: #c9a84c; --gold-light: #e8d5a0;
+    --green: #2d6a4f; --red: #a33b2a; --muted: #7a7060; --border: #d9d0be; --card: #faf7f2;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+
+  /* TOAST */
+  #toast {
+    position:fixed; bottom:24px; right:24px; background:#1a1916; color:#fff;
+    padding:12px 20px; border-radius:6px; font-size:13px; font-weight:500;
+    z-index:9999; display:none; animation:slideUp .25s ease;
+    border-left:3px solid var(--gold); max-width:320px;
+  }
+  #toast.show { display:block; }
+  #toast.err  { border-left-color: var(--red); }
+  @keyframes slideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* LOADER OVERLAY */
+  #loader {
+    position:fixed; inset:0; background:rgba(15,14,12,.55);
+    z-index:500; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  }
+  #loader.show { display:flex; }
+  .spinner { width:40px; height:40px; border:3px solid rgba(201,168,76,.3); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  #loader p { color:#fff; font-size:13px; opacity:.8; }
 
   /* HEADER */
   header { background:var(--ink); padding:34px 32px 26px; text-align:center; position:relative; overflow:hidden; }
@@ -44,6 +49,14 @@
   .hdr-label { font-size:11px; font-weight:500; letter-spacing:4px; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
   header h1 { font-family:'Playfair Display',serif; font-size:clamp(24px,5vw,42px); font-weight:900; color:#fff; line-height:1.1; margin-bottom:5px; }
   header p  { color:#9a9080; font-size:14px; font-weight:300; }
+
+  /* SYNC STATUS */
+  .sync-bar { background:#111; padding:6px 24px; display:flex; align-items:center; gap:8px; font-size:11px; color:#666; border-bottom:1px solid #222; }
+  .sync-dot { width:7px; height:7px; border-radius:50%; background:#444; flex-shrink:0; transition:background .3s; }
+  .sync-dot.ok  { background:#25D366; }
+  .sync-dot.err { background:var(--red); }
+  .sync-dot.loading { background:var(--gold); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
   /* CONFIG */
   .config-bar { padding:11px 24px; background:#1a1916; display:flex; gap:14px; align-items:center; flex-wrap:wrap; border-bottom:2px solid var(--gold); }
@@ -57,11 +70,7 @@
   .stat { flex:1; background:var(--card); padding:15px 10px; text-align:center; }
   .stat-num { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; line-height:1; margin-bottom:3px; }
   .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:500; }
-  .sn-total   { color:var(--ink); }
-  .sn-sent    { color:#1a3a7a; }
-  .sn-yes     { color:var(--green); }
-  .sn-no      { color:var(--red); }
-  .sn-pending { color:var(--gold); }
+  .sn-total{color:var(--ink);} .sn-sent{color:#1a3a7a;} .sn-yes{color:var(--green);} .sn-no{color:var(--red);} .sn-pending{color:var(--gold);}
 
   /* TOOLBAR */
   .toolbar { padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
@@ -69,20 +78,15 @@
   .toolbar input { flex:1; min-width:170px; }
   .toolbar input:focus, .toolbar select:focus { border-color:var(--gold); }
   .btn { padding:8px 16px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; border:none; border-radius:4px; cursor:pointer; transition:all .15s; white-space:nowrap; }
-  .btn-gold   { background:var(--gold); color:#fff; }
-  .btn-gold:hover   { background:#b8953e; }
-  .btn-green  { background:var(--green); color:#fff; }
-  .btn-green:hover  { background:#1f4d38; }
-  .btn-blue   { background:#1a3a7a; color:#fff; }
-  .btn-blue:hover   { background:#122a5a; }
-  .btn-out    { background:transparent; color:var(--ink); border:1px solid var(--border); }
-  .btn-out:hover    { background:var(--cream); border-color:var(--ink); }
-  .btn-danger { background:transparent; color:var(--red); border:1px solid #e8b0a8; }
-  .btn-danger:hover { background:#ffeaea; border-color:var(--red); }
+  .btn-gold  { background:var(--gold); color:#fff; } .btn-gold:hover  { background:#b8953e; }
+  .btn-green { background:var(--green); color:#fff; } .btn-green:hover { background:#1f4d38; }
+  .btn-blue  { background:#1a3a7a; color:#fff; } .btn-blue:hover  { background:#122a5a; }
+  .btn-out   { background:transparent; color:var(--ink); border:1px solid var(--border); } .btn-out:hover { background:var(--cream); border-color:var(--ink); }
+  .btn-danger{ background:transparent; color:var(--red); border:1px solid #e8b0a8; } .btn-danger:hover { background:#ffeaea; border-color:var(--red); }
 
   /* PDF DROPDOWN */
   .pdf-wrap { position:relative; }
-  .pdf-menu { position:absolute; top:calc(100% + 4px); right:0; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:190px; z-index:50; display:none; animation:fadeIn .15s ease; }
+  .pdf-menu { position:absolute; top:calc(100% + 4px); right:0; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 4px 16px rgba(0,0,0,.12); min-width:200px; z-index:50; display:none; animation:fadeIn .15s ease; }
   .pdf-menu.open { display:block; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
   .pdf-item { padding:9px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); transition:background .1s; }
@@ -108,36 +112,27 @@
   tbody tr { border-bottom:1px solid var(--border); background:var(--card); transition:background .1s; }
   tbody tr:hover { background:#fff; }
   tbody td { padding:11px 13px; font-size:13px; vertical-align:middle; }
-  .tc-num   { color:var(--muted); font-size:11px; width:34px; }
-  .tc-name  { font-weight:500; }
-  .tc-phone { color:var(--muted); white-space:nowrap; }
-  .tc-notes { color:var(--muted); font-style:italic; max-width:110px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tc-ts    { font-size:11px; color:var(--muted); margin-top:2px; }
+  .tc-num{color:var(--muted);font-size:11px;width:34px;} .tc-name{font-weight:500;} .tc-phone{color:var(--muted);white-space:nowrap;}
+  .tc-notes{color:var(--muted);font-style:italic;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tc-ts{font-size:11px;color:var(--muted);margin-top:2px;}
 
   /* BADGES */
   .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; }
-  .badge.pending { background:#f5edd5; color:#7a5c00; }
-  .badge.sent    { background:#dce8ff; color:#1a3a7a; }
-  .badge.yes     { background:#d4edda; color:#1a5c34; }
-  .badge.no      { background:#f8d7da; color:#7a1f1f; }
-  .badge.dash    { background:transparent; color:#ccc; font-size:16px; letter-spacing:0; padding:0 3px; }
+  .badge.pending{background:#f5edd5;color:#7a5c00;} .badge.sent{background:#dce8ff;color:#1a3a7a;}
+  .badge.yes{background:#d4edda;color:#1a5c34;} .badge.no{background:#f8d7da;color:#7a1f1f;}
+  .badge.dash{background:transparent;color:#ccc;font-size:16px;letter-spacing:0;padding:0 3px;}
 
   /* ROW ACTIONS */
   .ra-wrap { display:flex; gap:4px; flex-wrap:nowrap; }
   .ra { padding:4px 9px; font-size:11px; font-weight:600; border:none; border-radius:3px; cursor:pointer; transition:all .1s; white-space:nowrap; }
-  .ra-wa    { background:#25D366; color:#fff; }
-  .ra-wa:hover   { background:#128C7E; }
-  .ra-yes   { background:#d4edda; color:#1a5c34; border:1px solid #a8d5b5; }
-  .ra-yes:hover  { background:#2d6a4f; color:#fff; }
-  .ra-no    { background:#f8d7da; color:#7a1f1f; border:1px solid #e8a8a0; }
-  .ra-no:hover   { background:#a33b2a; color:#fff; }
-  .ra-del   { background:#fff0f0; color:#a33b2a; border:1px solid #e8b0a8; }
-  .ra-del:hover  { background:#a33b2a; color:#fff; }
+  .ra-wa  { background:#25D366; color:#fff; } .ra-wa:hover  { background:#128C7E; }
+  .ra-yes { background:#d4edda; color:#1a5c34; border:1px solid #a8d5b5; } .ra-yes:hover { background:#2d6a4f; color:#fff; }
+  .ra-no  { background:#f8d7da; color:#7a1f1f; border:1px solid #e8a8a0; } .ra-no:hover  { background:#a33b2a; color:#fff; }
+  .ra-del { background:#fff0f0; color:#a33b2a; border:1px solid #e8b0a8; } .ra-del:hover { background:#a33b2a; color:#fff; }
 
   /* EMPTY */
   .empty { text-align:center; padding:55px 20px; color:var(--muted); }
   .empty-icon { font-size:34px; margin-bottom:8px; }
-  .empty p { font-size:14px; }
 
   /* MODALS */
   .overlay { display:none; position:fixed; inset:0; background:rgba(15,14,12,.76); z-index:200; align-items:center; justify-content:center; padding:20px; }
@@ -149,15 +144,12 @@
   .mbox textarea { width:100%; padding:11px 13px; border:1px solid var(--border); background:#fff; font-family:'DM Sans',sans-serif; font-size:13px; border-radius:4px; resize:vertical; min-height:120px; outline:none; margin-bottom:14px; line-height:1.6; }
   .mbox textarea:focus { border-color:var(--gold); }
   .mact { display:flex; gap:9px; justify-content:flex-end; flex-wrap:wrap; }
-  /* confirm modal */
   .cbox { max-width:370px; text-align:center; }
   .cbox .cicon { font-size:34px; margin-bottom:8px; }
   .cbox h3 { font-family:'Playfair Display',serif; font-size:17px; margin-bottom:7px; }
   .cbox p { color:var(--muted); font-size:13px; margin-bottom:18px; }
   .cact { display:flex; gap:9px; justify-content:center; }
-  /* wa modal */
   .wabox { max-width:500px; }
-  /* bulk modal */
   .bkbox { max-width:540px; }
   .bk-list { max-height:200px; overflow-y:auto; margin-bottom:12px; border:1px solid var(--border); border-radius:4px; background:#fff; }
   .bk-item { display:flex; align-items:center; gap:9px; padding:8px 13px; border-bottom:1px solid var(--border); font-size:13px; }
@@ -169,23 +161,14 @@
   .bk-foot { display:flex; gap:9px; justify-content:space-between; align-items:center; flex-wrap:wrap; }
   .sel-all { font-size:12px; color:var(--gold); cursor:pointer; text-decoration:underline; font-weight:500; }
 
-  /* ===================== PRINT AREA ===================== */
-  #printArea {
-    display: none;
-    font-family: 'DM Sans', sans-serif;
-    background: #fff;
-    color: #111;
-    font-size: 12px;
-  }
-  .pa-header { margin-bottom: 18px; border-bottom: 2px solid #111; padding-bottom: 10px; }
-  .pa-header h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; margin-bottom: 3px; }
-  .pa-header p  { font-size: 11px; color: #555; }
-  .pa-section   { margin-bottom: 18px; }
-  .pa-section h3 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; padding: 4px 8px; color: #fff; border-radius: 2px; }
-  .pa-section h3.h-yes  { background: #2d6a4f; }
-  .pa-section h3.h-no   { background: #a33b2a; }
-  .pa-section h3.h-sent { background: #1a3a7a; }
-  .pa-section h3.h-pend { background: #7a5c00; }
+  /* PRINT AREA */
+  #printArea { display:none; font-family:'DM Sans',sans-serif; background:#fff; color:#111; font-size:12px; }
+  .pa-header { margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px; }
+  .pa-header h2 { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; margin-bottom:3px; }
+  .pa-header p  { font-size:11px; color:#555; }
+  .pa-section   { margin-bottom:18px; }
+  .pa-section h3 { font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; padding:4px 8px; color:#fff; border-radius:2px; }
+  .pa-section h3.h-yes{background:#2d6a4f;} .pa-section h3.h-no{background:#a33b2a;} .pa-section h3.h-sent{background:#1a3a7a;} .pa-section h3.h-pend{background:#7a5c00;}
   .pa-table { width:100%; border-collapse:collapse; margin-bottom:6px; }
   .pa-table th { background:#f0ece4; padding:5px 8px; text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; border:1px solid #d0c8b8; }
   .pa-table td { padding:5px 8px; border:1px solid #d0c8b8; font-size:11px; vertical-align:top; }
@@ -197,15 +180,25 @@
 </head>
 <body>
 
-<!-- =================== PRINT AREA =================== -->
 <div id="printArea"></div>
 
-<!-- =================== UI =================== -->
+<!-- LOADER -->
+<div id="loader"><div class="spinner"></div><p id="loaderMsg">Cargando datos…</p></div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
 <header>
   <div class="hdr-label">Sistema de Invitaciones</div>
   <h1 id="eventTitle">Nombre del Evento</h1>
   <p id="eventDate">Fecha y lugar del evento</p>
 </header>
+
+<!-- SYNC STATUS -->
+<div class="sync-bar">
+  <div class="sync-dot" id="syncDot"></div>
+  <span id="syncMsg">Conectando con Google Sheets…</span>
+</div>
 
 <div class="config-bar">
   <label>Evento:</label>
@@ -233,29 +226,16 @@
   </select>
   <button class="btn btn-gold"  onclick="toggleAdd()">＋ Agregar</button>
   <button class="btn btn-green" onclick="openBulk()">📲 Enviar invitaciones</button>
-
-  <!-- PDF DROPDOWN -->
   <div class="pdf-wrap" id="pdfWrap">
     <button class="btn btn-blue" onclick="togglePdfMenu(event)">📄 Exportar PDF ▾</button>
     <div class="pdf-menu" id="pdfMenu">
-      <div class="pdf-item" onclick="printReport('all')">
-        <span class="pdf-dot" style="background:#555"></span>Todos los invitados
-      </div>
-      <div class="pdf-item" onclick="printReport('yes')">
-        <span class="pdf-dot" style="background:#2d6a4f"></span>Confirman asistencia
-      </div>
-      <div class="pdf-item" onclick="printReport('no')">
-        <span class="pdf-dot" style="background:#a33b2a"></span>No asisten
-      </div>
-      <div class="pdf-item" onclick="printReport('sent')">
-        <span class="pdf-dot" style="background:#1a3a7a"></span>Invitación enviada (sin resp.)
-      </div>
-      <div class="pdf-item" onclick="printReport('pending')">
-        <span class="pdf-dot" style="background:#7a5c00"></span>Sin enviar
-      </div>
+      <div class="pdf-item" onclick="printReport('all')"><span class="pdf-dot" style="background:#555"></span>Todos los invitados</div>
+      <div class="pdf-item" onclick="printReport('yes')"><span class="pdf-dot" style="background:#2d6a4f"></span>Confirman asistencia</div>
+      <div class="pdf-item" onclick="printReport('no')"><span class="pdf-dot" style="background:#a33b2a"></span>No asisten</div>
+      <div class="pdf-item" onclick="printReport('sent')"><span class="pdf-dot" style="background:#1a3a7a"></span>Enviados sin respuesta</div>
+      <div class="pdf-item" onclick="printReport('pending')"><span class="pdf-dot" style="background:#7a5c00"></span>Sin enviar</div>
     </div>
   </div>
-
   <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar todos</button>
 </div>
 
@@ -288,7 +268,7 @@
   </div>
 </div>
 
-<!-- MODAL: WhatsApp individual -->
+<!-- MODAL: WhatsApp -->
 <div class="overlay" id="ovWA">
   <div class="mbox wabox">
     <h2>Enviar por WhatsApp</h2>
@@ -306,7 +286,7 @@
   <div class="mbox cbox">
     <div class="cicon">🗑️</div>
     <h3>¿Eliminar invitado?</h3>
-    <p id="delDesc">Esta acción no se puede deshacer.</p>
+    <p id="delDesc"></p>
     <div class="cact">
       <button class="btn btn-out"    onclick="closeAll()">Cancelar</button>
       <button class="btn btn-danger" onclick="confirmDel()">Eliminar</button>
@@ -320,9 +300,7 @@
     <h2>📲 Enviar invitaciones</h2>
     <p class="msub">Seleccioná a quiénes querés enviar la invitación con botones de confirmación.</p>
     <div class="bk-list" id="bulkList"></div>
-    <div class="bk-note">
-      ⚠️ Cada invitado recibirá un link con botones para confirmar <strong>Sí / No</strong>. Se abre una ventana de WhatsApp por persona (intervalo 1 seg). Permitir pop-ups en el navegador.
-    </div>
+    <div class="bk-note">⚠️ Cada invitado recibe un link con botones <strong>Sí / No</strong>. Se abre una ventana de WhatsApp por persona (intervalo 1 seg). Permitir pop-ups en el navegador.</div>
     <div class="bk-foot">
       <span class="sel-all" onclick="toggleSelAll()">✔ Seleccionar / Deseleccionar todos</span>
       <div style="display:flex;gap:9px">
@@ -333,12 +311,14 @@
   </div>
 </div>
 
-<footer>Gestión de Invitaciones · Los datos se guardan automáticamente en este navegador</footer>
+<footer>Gestión de Invitaciones · Sincronizado con Google Sheets</footer>
 
-<!-- ===================== SCRIPT ===================== -->
 <script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxeoZ8PViV8EUjUecLfJwSRWWNcPSO48qJMBTbYPSo_pD15Osw3orgvyntQgiZSEA3Lng/exec';
+
 // ── STATE ──────────────────────────────────────────────────────────────────
-let people    = JSON.parse(localStorage.getItem('inv_v4') || '[]');
+let people    = [];
 let eventCfg  = JSON.parse(localStorage.getItem('evtCfg') || '{"title":"Nombre del Evento","date":"Fecha y lugar del evento"}');
 let delTarget = null;
 let waTarget  = null;
@@ -347,12 +327,164 @@ let waTarget  = null;
 document.getElementById('cfgTitle').value = eventCfg.title;
 document.getElementById('cfgDate').value  = eventCfg.date;
 syncHeader();
-checkConfirmParam(); // handle ?confirm= link clicks
-renderTable();
+checkConfirmParam();
+loadFromSheet();
 
-// ── PERSISTENCE ───────────────────────────────────────────────────────────
-function save() { localStorage.setItem('inv_v4', JSON.stringify(people)); }
+// ── GOOGLE SHEETS API ──────────────────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncMsg');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = msg;
+}
 
+async function loadFromSheet() {
+  setSyncStatus('loading', 'Cargando datos desde Google Sheets…');
+  showLoader('Cargando datos…');
+  try {
+    const res  = await fetch(SCRIPT_URL);
+    const json = await res.json();
+    if (json.ok) {
+      people = json.data.map(r => ({
+        id:         String(r.id),
+        name:       r.nombre      || '',
+        phone:      r.telefono    || '',
+        notes:      r.notas       || '',
+        status:     r.estado      || 'pending',
+        sentAt:     r.enviado_en  || null,
+        responseAt: r.respuesta_en|| null,
+      }));
+      setSyncStatus('ok', `Sincronizado · ${people.length} invitados · ${now()}`);
+      toast('✅ Datos cargados desde Google Sheets');
+    } else {
+      throw new Error(json.error || 'Error desconocido');
+    }
+  } catch(e) {
+    setSyncStatus('err', 'Error al conectar con Google Sheets');
+    toast('❌ No se pudo conectar con Google Sheets', true);
+  }
+  hideLoader();
+  renderTable();
+}
+
+async function saveToSheet(person) {
+  setSyncStatus('loading', 'Guardando…');
+  try {
+    const body = {
+      action:       'save',
+      id:           person.id,
+      nombre:       person.name,
+      telefono:     person.phone,
+      notas:        person.notes,
+      estado:       person.status,
+      enviado_en:   person.sentAt     || '',
+      respuesta_en: person.responseAt || '',
+    };
+    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(body) });
+    const json = await res.json();
+    if (json.ok) {
+      setSyncStatus('ok', `Guardado · ${now()}`);
+    } else {
+      throw new Error(json.error);
+    }
+  } catch(e) {
+    setSyncStatus('err', 'Error al guardar');
+    toast('❌ Error al guardar en Google Sheets', true);
+  }
+}
+
+async function deleteFromSheet(id) {
+  setSyncStatus('loading', 'Eliminando…');
+  try {
+    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'delete', id: String(id) }) });
+    const json = await res.json();
+    if (json.ok) {
+      setSyncStatus('ok', `Eliminado · ${now()}`);
+    } else {
+      throw new Error(json.error);
+    }
+  } catch(e) {
+    setSyncStatus('err', 'Error al eliminar');
+    toast('❌ Error al eliminar en Google Sheets', true);
+  }
+}
+
+async function deleteAllFromSheet() {
+  setSyncStatus('loading', 'Eliminando todos…');
+  try {
+    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'deleteAll' }) });
+    const json = await res.json();
+    if (json.ok) {
+      setSyncStatus('ok', `Todos eliminados · ${now()}`);
+    } else {
+      throw new Error(json.error);
+    }
+  } catch(e) {
+    setSyncStatus('err', 'Error al eliminar');
+    toast('❌ Error al eliminar en Google Sheets', true);
+  }
+}
+
+// ── CONFIRMATION LINK HANDLER ──────────────────────────────────────────────
+function checkConfirmParam() {
+  const params = new URLSearchParams(window.location.search);
+  const id  = params.get('confirm');
+  const res = params.get('r');
+  if (!id || !res) return;
+
+  // Load sheet, update status, show confirmation page
+  fetch(SCRIPT_URL)
+    .then(r => r.json())
+    .then(async json => {
+      if (!json.ok) throw new Error();
+      const row = json.data.find(x => String(x.id) === String(id));
+      const name = row ? row.nombre : 'Invitado/a';
+      if (row && (res === 'yes' || res === 'no')) {
+        const updated = {
+          id: String(row.id), nombre: row.nombre, telefono: row.telefono,
+          notas: row.notas, estado: res,
+          enviado_en: row.enviado_en,
+          respuesta_en: now()
+        };
+        await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'save', ...updated }) });
+      }
+      showConfirmPage(name, res);
+    })
+    .catch(() => showConfirmPage('Invitado/a', res));
+}
+
+function showConfirmPage(name, res) {
+  const isYes = res === 'yes';
+  const evt   = eventCfg.title || 'el evento';
+  const fecha = eventCfg.date  || '';
+  document.body.innerHTML = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
+           background:${isYes?'linear-gradient(135deg,#1a3d2b,#2d6a4f)':'linear-gradient(135deg,#3d1a1a,#a33b2a)'};
+           color:#fff;padding:30px;text-align:center;}
+      .card{max-width:440px;width:100%;}
+      .bigicon{font-size:72px;margin-bottom:18px;animation:pop .4s ease;}
+      @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+      h1{font-family:'Playfair Display',serif;font-size:clamp(26px,6vw,40px);font-weight:900;margin-bottom:10px;line-height:1.1;}
+      .sub{font-size:16px;opacity:.85;margin-bottom:24px;line-height:1.5;}
+      .pill{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:8px 20px;border-radius:30px;font-size:14px;backdrop-filter:blur(4px);margin-bottom:28px;}
+      .note{font-size:12px;opacity:.6;line-height:1.6;}
+    </style>
+    <div class="card">
+      <div class="bigicon">${isYes?'🎉':'😔'}</div>
+      <h1>${isYes?'¡Nos vemos ahí!':'Gracias por avisar'}</h1>
+      <p class="sub">${isYes
+        ?`<strong>${esc(name)}</strong>, tu asistencia a <em>${esc(evt)}</em> quedó confirmada.`
+        :`<strong>${esc(name)}</strong>, registramos que no vas a poder asistir a <em>${esc(evt)}</em>.`
+      }</p>
+      ${fecha?`<div class="pill">📅 ${esc(fecha)}</div>`:''}
+      <p class="note">Podés cerrar esta ventana.</p>
+    </div>`;
+}
+
+// ── EVENT CONFIG ───────────────────────────────────────────────────────────
 function syncHeader() {
   document.getElementById('eventTitle').textContent = eventCfg.title || 'Nombre del Evento';
   document.getElementById('eventDate').textContent  = eventCfg.date  || 'Fecha y lugar del evento';
@@ -364,128 +496,75 @@ function updateEvent() {
   localStorage.setItem('evtCfg', JSON.stringify(eventCfg));
 }
 
-// ── CONFIRMATION LINK HANDLER ─────────────────────────────────────────────
-// When someone clicks the link in WhatsApp it opens THIS same file
-// with ?confirm=ID&r=yes|no  →  we register the response automatically.
-function checkConfirmParam() {
-  const params = new URLSearchParams(window.location.search);
-  const id  = parseInt(params.get('confirm'));
-  const res = params.get('r'); // 'yes' or 'no'
-  if (!id || !res) return;
-
-  const p = people.find(x => x.id === id);
-  if (p && (res === 'yes' || res === 'no')) {
-    p.status     = res;
-    p.responseAt = now();
-    save();
-    // Show a nice full-screen confirmation page instead of the admin panel
-    showConfirmationPage(p, res);
-  } else {
-    // ID not found or already replied — show a generic page
-    showConfirmationPage(null, res);
-  }
-}
-
-function showConfirmationPage(p, res) {
-  const isYes = res === 'yes';
-  const name  = p ? p.name : 'Invitado/a';
-  const evt   = eventCfg.title || 'el evento';
-  const fecha = eventCfg.date  || '';
-
-  document.body.innerHTML = `
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
-           background:${isYes ? 'linear-gradient(135deg,#1a3d2b 0%,#2d6a4f 100%)' : 'linear-gradient(135deg,#3d1a1a 0%,#a33b2a 100%)'};
-           color:#fff;padding:30px;text-align:center;}
-      .card{max-width:440px;width:100%;}
-      .bigicon{font-size:72px;margin-bottom:18px;animation:pop .4s ease;}
-      @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-      h1{font-family:'Playfair Display',serif;font-size:clamp(26px,6vw,40px);font-weight:900;margin-bottom:10px;line-height:1.1;}
-      .sub{font-size:16px;opacity:.85;margin-bottom:24px;line-height:1.5;}
-      .pill{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
-            padding:8px 20px;border-radius:30px;font-size:14px;backdrop-filter:blur(4px);margin-bottom:28px;}
-      .note{font-size:12px;opacity:.6;line-height:1.6;}
-    </style>
-    <div class="card">
-      <div class="bigicon">${isYes ? '🎉' : '😔'}</div>
-      <h1>${isYes ? '¡Nos vemos ahí!' : 'Gracias por avisar'}</h1>
-      <p class="sub">
-        ${isYes
-          ? `<strong>${name}</strong>, tu asistencia a <em>${evt}</em> quedó confirmada.`
-          : `<strong>${name}</strong>, registramos que no vas a poder asistir a <em>${evt}</em>.`
-        }
-      </p>
-      ${fecha ? `<div class="pill">📅 ${fecha}</div>` : ''}
-      <p class="note">Podés cerrar esta ventana.</p>
-    </div>
-  `;
-}
-
-// ── WHATSAPP MESSAGE ───────────────────────────────────────────────────────
-// The message includes a confirmation link that, when opened, registers the answer.
-function buildMsg(p) {
-  const t = eventCfg.title || 'nuestro evento';
-  const d = eventCfg.date  || '';
-
-  // Base URL of this same file (works both locally and hosted)
-  const base = window.location.href.split('?')[0];
-  const linkYes = `${base}?confirm=${p.id}&r=yes`;
-  const linkNo  = `${base}?confirm=${p.id}&r=no`;
-
-  return `Hola ${p.name} 👋\n\nTe invitamos a *${t}*${d ? '\n📅 ' + d : ''}.\n\n¿Podés confirmar tu asistencia?\n\n✅ *SÍ, confirmo:*\n${linkYes}\n\n❌ *NO puedo ir:*\n${linkNo}\n\n¡Gracias!`;
-}
-
-// ── ADD / DELETE ───────────────────────────────────────────────────────────
+// ── ADD PERSON ─────────────────────────────────────────────────────────────
 function toggleAdd() {
   const s = document.getElementById('addSec');
   s.classList.toggle('open');
   if (s.classList.contains('open')) document.getElementById('newName').focus();
 }
 
-function addPerson() {
+async function addPerson() {
   const name  = document.getElementById('newName').value.trim();
   const phone = document.getElementById('newPhone').value.trim().replace(/\D/g,'');
   const notes = document.getElementById('newNotes').value.trim();
   if (!name)  { alert('El nombre es obligatorio.'); return; }
   if (!phone) { alert('El teléfono es obligatorio.'); return; }
-  people.push({ id: Date.now(), name, phone, notes, status:'pending', sentAt:null, responseAt:null });
-  save();
+  const p = { id: String(Date.now()), name, phone, notes, status:'pending', sentAt:null, responseAt:null };
+  people.push(p);
+  renderTable();
   document.getElementById('newName').value  = '';
   document.getElementById('newPhone').value = '';
   document.getElementById('newNotes').value = '';
   document.getElementById('newName').focus();
-  renderTable();
+  await saveToSheet(p);
+  toast('✅ Invitado agregado y guardado en Google Sheets');
 }
 
+// ── DELETE ─────────────────────────────────────────────────────────────────
 function askDel(id) {
   const p = people.find(x => x.id === id);
   delTarget = id;
   document.getElementById('delDesc').textContent = `¿Eliminar a "${p.name}"? Esta acción no se puede deshacer.`;
   document.getElementById('ovDel').classList.add('open');
 }
-function confirmDel() {
-  people = people.filter(p => p.id !== delTarget);
+async function confirmDel() {
+  const id = delTarget;
+  people = people.filter(p => p.id !== id);
   delTarget = null;
-  save(); closeAll(); renderTable();
+  closeAll(); renderTable();
+  await deleteFromSheet(id);
+  toast('🗑 Invitado eliminado de Google Sheets');
 }
-function clearAll() {
+async function clearAll() {
   if (!people.length) return;
   if (!confirm(`¿Borrar los ${people.length} invitados? Esta acción no se puede deshacer.`)) return;
-  people = []; save(); renderTable();
+  people = []; renderTable();
+  await deleteAllFromSheet();
+  toast('🗑 Todos los invitados eliminados');
 }
 
 // ── STATUS ─────────────────────────────────────────────────────────────────
-function setStatus(id, status) {
+async function setStatus(id, status) {
   const p = people.find(x => x.id === id);
   if (!p) return;
   p.status = status;
   if (status === 'yes' || status === 'no') p.responseAt = now();
-  save(); renderTable();
+  renderTable();
+  await saveToSheet(p);
+  const lbl = status === 'yes' ? '✅ Asistencia confirmada' : '❌ No asistencia registrada';
+  toast(lbl);
 }
 
-// ── SINGLE WA ─────────────────────────────────────────────────────────────
+// ── WHATSAPP ───────────────────────────────────────────────────────────────
+function buildMsg(p) {
+  const t    = eventCfg.title || 'nuestro evento';
+  const d    = eventCfg.date  || '';
+  const base = window.location.href.split('?')[0];
+  const yes  = `${base}?confirm=${p.id}&r=yes`;
+  const no   = `${base}?confirm=${p.id}&r=no`;
+  return `Hola ${p.name} 👋\n\nTe invitamos a *${t}*${d?'\n📅 '+d:''}.\n\n¿Podés confirmar tu asistencia?\n\n✅ *SÍ, confirmo:*\n${yes}\n\n❌ *NO puedo ir:*\n${no}\n\n¡Gracias!`;
+}
+
 function openWA(id) {
   waTarget = id;
   const p = people.find(x => x.id === id);
@@ -493,21 +572,22 @@ function openWA(id) {
   document.getElementById('waMsg').value = buildMsg(p);
   document.getElementById('ovWA').classList.add('open');
 }
-function sendWA() {
+async function sendWA() {
   const p = people.find(x => x.id === waTarget);
   if (!p) return;
-  const msg = encodeURIComponent(document.getElementById('waMsg').value);
-  window.open(`https://wa.me/${p.phone}?text=${msg}`, '_blank');
+  window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(document.getElementById('waMsg').value)}`, '_blank');
   p.status = 'sent'; p.sentAt = now();
-  save(); closeAll(); renderTable();
+  closeAll(); renderTable();
+  await saveToSheet(p);
+  toast('📲 Invitación enviada y registrada');
 }
 
-// ── BULK SEND ─────────────────────────────────────────────────────────────
+// ── BULK SEND ──────────────────────────────────────────────────────────────
 function openBulk() {
   const list = document.getElementById('bulkList');
   list.innerHTML = '';
   const eligible = people.filter(p => p.status === 'pending' || p.status === 'sent');
-  if (!eligible.length) { alert('No hay invitados pendientes de respuesta para enviar.'); return; }
+  if (!eligible.length) { alert('No hay invitados pendientes de respuesta.'); return; }
   eligible.forEach(p => {
     const d = document.createElement('div');
     d.className = 'bk-item';
@@ -515,8 +595,7 @@ function openBulk() {
       <input type="checkbox" id="ck_${p.id}" value="${p.id}" ${p.status==='pending'?'checked':''}>
       <label for="ck_${p.id}" class="bi-name">${esc(p.name)}</label>
       <span class="bi-phone">+${esc(p.phone)}</span>
-      <span class="badge ${p.status}">${p.status==='pending'?'⏳ Sin enviar':'📤 Re-enviar'}</span>
-    `;
+      <span class="badge ${p.status}">${p.status==='pending'?'⏳ Sin enviar':'📤 Re-enviar'}</span>`;
     list.appendChild(d);
   });
   document.getElementById('ovBulk').classList.add('open');
@@ -527,18 +606,20 @@ function toggleSelAll() {
   cbs.forEach(c => c.checked = !all);
 }
 function sendBulk() {
-  const ids = [...document.querySelectorAll('#bulkList input[type=checkbox]:checked')].map(c => parseInt(c.value));
+  const ids = [...document.querySelectorAll('#bulkList input[type=checkbox]:checked')].map(c => c.value);
   if (!ids.length) { alert('Seleccioná al menos una persona.'); return; }
   closeAll();
   ids.forEach((id, i) => {
-    setTimeout(() => {
+    setTimeout(async () => {
       const p = people.find(x => x.id === id);
       if (!p) return;
       window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(buildMsg(p))}`, '_blank');
       p.status = 'sent'; p.sentAt = now();
-      save(); renderTable();
+      renderTable();
+      await saveToSheet(p);
     }, i * 1000);
   });
+  toast(`📲 Enviando ${ids.length} invitaciones…`);
 }
 
 // ── PDF / PRINT ────────────────────────────────────────────────────────────
@@ -550,77 +631,51 @@ document.addEventListener('click', () => document.getElementById('pdfMenu').clas
 
 function printReport(filter) {
   document.getElementById('pdfMenu').classList.remove('open');
-
-  const titles = { all:'Todos los invitados', yes:'Confirman asistencia', no:'No asisten', sent:'Invitación enviada (sin respuesta)', pending:'Sin enviar' };
-  const hCls   = { yes:'h-yes', no:'h-no', sent:'h-sent', pending:'h-pend', all:'h-sent' };
+  const titles = { all:'Todos los invitados', yes:'Confirman asistencia', no:'No asisten', sent:'Enviados sin respuesta', pending:'Sin enviar' };
   const statLbl= { pending:'Sin enviar', sent:'Enviado', yes:'Sí asiste', no:'No asiste' };
-
   let groups;
   if (filter === 'all') {
     groups = [
-      { label:'Confirman asistencia ✅',   cls:'h-yes',  data: people.filter(p=>p.status==='yes')  },
-      { label:'No asisten ❌',             cls:'h-no',   data: people.filter(p=>p.status==='no')   },
-      { label:'Invitación enviada ⏳',     cls:'h-sent', data: people.filter(p=>p.status==='sent') },
-      { label:'Sin enviar 📋',            cls:'h-pend', data: people.filter(p=>p.status==='pending') },
-    ].filter(g => g.data.length);
+      { label:'Confirman asistencia ✅', cls:'h-yes',  data: people.filter(p=>p.status==='yes') },
+      { label:'No asisten ❌',           cls:'h-no',   data: people.filter(p=>p.status==='no') },
+      { label:'Invitación enviada ⏳',   cls:'h-sent', data: people.filter(p=>p.status==='sent') },
+      { label:'Sin enviar 📋',          cls:'h-pend', data: people.filter(p=>p.status==='pending') },
+    ].filter(g=>g.data.length);
   } else {
     const clsMap = { yes:'h-yes', no:'h-no', sent:'h-sent', pending:'h-pend' };
-    groups = [{ label: titles[filter], cls: clsMap[filter] || 'h-sent', data: people.filter(p=>p.status===filter) }];
+    groups = [{ label:titles[filter], cls:clsMap[filter]||'h-sent', data:people.filter(p=>p.status===filter) }];
   }
-
-  if (!groups.length || groups.every(g=>!g.data.length)) {
-    alert('No hay invitados en este estado para exportar.'); return;
-  }
-
-  const totalCount = groups.reduce((s,g)=>s+g.data.length, 0);
-
-  let html = `
-    <div class="pa-header">
-      <h2>${esc(eventCfg.title || 'Evento')}</h2>
-      <p>${esc(eventCfg.date || '')} &nbsp;·&nbsp; Exportado: ${now()} &nbsp;·&nbsp; Total: ${totalCount}</p>
-    </div>
-  `;
-
+  if (!groups.length || groups.every(g=>!g.data.length)) { alert('No hay invitados en este estado.'); return; }
+  const total = groups.reduce((s,g)=>s+g.data.length,0);
+  let html = `<div class="pa-header"><h2>${esc(eventCfg.title||'Evento')}</h2><p>${esc(eventCfg.date||'')} · Exportado: ${now()} · Total: ${total}</p></div>`;
   groups.forEach(g => {
-    html += `<div class="pa-section">
-      <h3 class="${g.cls}">${g.label} — ${g.data.length} persona(s)</h3>
-      <table class="pa-table">
-        <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Estado</th><th>Envío</th><th>Respuesta</th><th>Notas</th></tr></thead>
-        <tbody>`;
+    html += `<div class="pa-section"><h3 class="${g.cls}">${g.label} — ${g.data.length} persona(s)</h3>
+      <table class="pa-table"><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Estado</th><th>Envío</th><th>Respuesta</th><th>Notas</th></tr></thead><tbody>`;
     g.data.forEach((p,i) => {
-      html += `<tr>
-        <td>${i+1}</td>
-        <td>${esc(p.name)}</td>
-        <td>+${esc(p.phone)}</td>
-        <td>${statLbl[p.status]||''}</td>
-        <td>${p.sentAt||'—'}</td>
-        <td>${p.responseAt||'—'}</td>
-        <td>${esc(p.notes)||'—'}</td>
-      </tr>`;
+      html += `<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>+${esc(p.phone)}</td><td>${statLbl[p.status]||''}</td><td>${p.sentAt||'—'}</td><td>${p.responseAt||'—'}</td><td>${esc(p.notes)||'—'}</td></tr>`;
     });
     html += `</tbody></table></div>`;
   });
-
   html += `<div class="pa-footer"><span>${esc(eventCfg.title||'')}</span><span>Generado el ${now()}</span></div>`;
-
   const pa = document.getElementById('printArea');
-  pa.innerHTML = html;
-  pa.style.display = 'block';
-  setTimeout(() => {
-    window.print();
-    setTimeout(() => { pa.style.display = 'none'; pa.innerHTML = ''; }, 500);
-  }, 120);
+  pa.innerHTML = html; pa.style.display = 'block';
+  setTimeout(() => { window.print(); setTimeout(() => { pa.style.display='none'; pa.innerHTML=''; }, 500); }, 120);
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
 function now() {
   return new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
-function esc(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function closeAll() {
-  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function closeAll() { document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open')); }
+function showLoader(msg) { document.getElementById('loaderMsg').textContent=msg; document.getElementById('loader').classList.add('show'); }
+function hideLoader() { document.getElementById('loader').classList.remove('show'); }
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isErr?' err':'');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className='', 3500);
 }
 
 // ── RENDER TABLE ───────────────────────────────────────────────────────────
@@ -641,7 +696,7 @@ function renderTable() {
 
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
-  document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
+  document.getElementById('emptyState').style.display = list.length?'none':'block';
 
   const sentB = {
     pending:`<span class="badge pending">⏳ No enviado</span>`,
@@ -668,13 +723,12 @@ function renderTable() {
       <td>${resB[p.status]}${p.responseAt?`<div class="tc-ts">${p.responseAt}</div>`:''}</td>
       <td>
         <div class="ra-wrap">
-          <button class="ra ra-wa"  onclick="openWA(${p.id})">📲 WA</button>
-          <button class="ra ra-yes" onclick="setStatus(${p.id},'yes')">✅ Sí</button>
-          <button class="ra ra-no"  onclick="setStatus(${p.id},'no')">❌ No</button>
-          <button class="ra ra-del" onclick="askDel(${p.id})">🗑 Borrar</button>
+          <button class="ra ra-wa"  onclick="openWA('${p.id}')">📲 WA</button>
+          <button class="ra ra-yes" onclick="setStatus('${p.id}','yes')">✅ Sí</button>
+          <button class="ra ra-no"  onclick="setStatus('${p.id}','no')">❌ No</button>
+          <button class="ra ra-del" onclick="askDel('${p.id}')">🗑 Borrar</button>
         </div>
-      </td>
-    `;
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -685,7 +739,7 @@ document.addEventListener('keydown', e => {
   if (e.key==='Enter' && document.getElementById('addSec').classList.contains('open')) addPerson();
 });
 document.querySelectorAll('.overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target===o) closeAll(); });
+  o.addEventListener('click', e => { if(e.target===o) closeAll(); });
 });
 </script>
 </body>
