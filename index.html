@@ -499,62 +499,51 @@ async function loadFromSheet() {
   renderTable();
 }
 
-async function saveToSheet(person) {
+// Google Apps Script no soporta CORS en POST desde el browser.
+// Usamos mode:'no-cors' — el dato se guarda igual pero no podemos leer la respuesta.
+async function postToSheet(body, successMsg, errMsg) {
   setSyncStatus('loading', 'Guardando…');
   try {
-    const body = {
-      action:       'save',
-      id:           person.id,
-      nombre:       person.name,
-      telefono:     person.phone,
-      notas:        person.notes,
-      estado:       person.status,
-      enviado_en:   person.sentAt     || '',
-      respuesta_en: person.responseAt || '',
-    };
-    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(body) });
-    const json = await res.json();
-    if (json.ok) {
-      setSyncStatus('ok', `Guardado · ${now()}`);
-    } else {
-      throw new Error(json.error);
-    }
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode:   'no-cors',
+      body:   JSON.stringify(body),
+    });
+    await new Promise(r => setTimeout(r, 900));
+    setSyncStatus('ok', `${successMsg} · ${now()}`);
   } catch(e) {
-    setSyncStatus('err', 'Error al guardar');
-    toast('❌ Error al guardar en Google Sheets', true);
+    setSyncStatus('err', errMsg);
+    toast(`❌ ${errMsg}`, true);
   }
+}
+
+async function saveToSheet(person) {
+  await postToSheet({
+    action:       'save',
+    id:           person.id,
+    nombre:       person.name,
+    telefono:     person.phone,
+    notas:        person.notes,
+    estado:       person.status,
+    enviado_en:   person.sentAt     || '',
+    respuesta_en: person.responseAt || '',
+  }, 'Guardado', 'Error al guardar en Google Sheets');
 }
 
 async function deleteFromSheet(id) {
-  setSyncStatus('loading', 'Eliminando…');
-  try {
-    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'delete', id: String(id) }) });
-    const json = await res.json();
-    if (json.ok) {
-      setSyncStatus('ok', `Eliminado · ${now()}`);
-    } else {
-      throw new Error(json.error);
-    }
-  } catch(e) {
-    setSyncStatus('err', 'Error al eliminar');
-    toast('❌ Error al eliminar en Google Sheets', true);
-  }
+  await postToSheet(
+    { action: 'delete', id: String(id) },
+    'Eliminado',
+    'Error al eliminar en Google Sheets'
+  );
 }
 
 async function deleteAllFromSheet() {
-  setSyncStatus('loading', 'Eliminando todos…');
-  try {
-    const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'deleteAll' }) });
-    const json = await res.json();
-    if (json.ok) {
-      setSyncStatus('ok', `Todos eliminados · ${now()}`);
-    } else {
-      throw new Error(json.error);
-    }
-  } catch(e) {
-    setSyncStatus('err', 'Error al eliminar');
-    toast('❌ Error al eliminar en Google Sheets', true);
-  }
+  await postToSheet(
+    { action: 'deleteAll' },
+    'Todos eliminados',
+    'Error al eliminar en Google Sheets'
+  );
 }
 
 // ── CONFIRMATION LINK HANDLER ──────────────────────────────────────────────
@@ -578,7 +567,7 @@ function checkConfirmParam() {
           enviado_en: row.enviado_en,
           respuesta_en: now()
         };
-        await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'save', ...updated }) });
+        await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:'save', ...updated }) });
       }
       showConfirmPage(name, res);
     })
